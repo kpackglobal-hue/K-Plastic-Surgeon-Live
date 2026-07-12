@@ -216,7 +216,7 @@ const VideoConsultation = ({ roomId = "room-123", isDoctor = true, onBack }) => 
       </div>
       
       {/* 우측 자막 기록(트랜스크립트) 패널 */}
-      <div className="absolute right-0 top-0 h-full w-80 bg-[#08090f]/75 border-l border-white/5 p-6 flex flex-col z-40 backdrop-blur-2xl">
+      <div className="absolute right-0 top-0 h-full w-96 bg-[#08090f]/75 border-l border-white/5 p-6 flex flex-col z-40 backdrop-blur-2xl">
         <h3 className="text-[#e5c483]/90 text-sm font-bold tracking-widest mb-6 border-b border-white/5 pb-3 uppercase">
           실시간 상담 기록
         </h3>
@@ -380,10 +380,10 @@ const VideoConsultation = ({ roomId = "room-123", isDoctor = true, onBack }) => 
         </div>
       )}
  
-      {/* 보정 필터 토글 버튼 */}
+      {/* 보정 필터 토글 버튼 (우측 레이아웃 겹침 방지: right-[408px]로 좌측 배치) */}
       <button 
         onClick={() => setIsBeautyFilterActive(!isBeautyFilterActive)}
-        className={`absolute top-6 right-48 z-50 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all duration-300 shadow-md flex items-center gap-2 active:scale-95 border ${
+        className={`absolute top-6 right-[408px] z-50 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all duration-300 shadow-md flex items-center gap-2 active:scale-95 border ${
           isBeautyFilterActive 
             ? 'bg-gradient-to-r from-[#e5c483] to-[#d4af37] text-[#08090f] border-[#e5c483]' 
             : 'bg-white/5 text-white/80 hover:bg-white/10 border-white/10'
@@ -392,9 +392,9 @@ const VideoConsultation = ({ roomId = "room-123", isDoctor = true, onBack }) => 
         <span>✨</span> {isBeautyFilterActive ? "보정 필터 ON" : "보정 필터 OFF"}
       </button>
  
-      {/* 개발/테스트용 Peer ID 표시 */}
-      <div className="absolute top-6 right-6 text-white/40 text-[10px] font-bold tracking-widest bg-white/5 border border-white/5 px-3 py-2 rounded-2xl z-50 uppercase">
-        Peer ID: <span className="text-[#e5c483] font-mono">{peerId}</span>
+      {/* 개발/테스트용 Session ID 표시 (우측 레이아웃 겹침 방지: top-left의 나가기 우측 배치) */}
+      <div className="absolute top-[26px] left-32 text-white/40 text-[10px] font-bold tracking-widest bg-[#08090f]/75 border border-white/5 px-3 py-2 rounded-2xl z-50 uppercase flex items-center gap-1.5 backdrop-blur-sm">
+        <span>Session ID:</span> <span className="text-[#e5c483] font-mono">{peerId}</span>
       </div>
     </div>
   );
