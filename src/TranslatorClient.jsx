@@ -456,9 +456,28 @@ export default function TranslatorClient({ onBack }) {
             </div>
           </div>
           
-          <p className={`text-xl font-bold tracking-tight text-center max-w-3xl transition-colors duration-300 ${isLive ? 'text-[#e5c483]' : 'text-white/40'}`}>
-            {statusMessage}
-          </p>
+          {isLive ? (
+            <div className="flex flex-col items-center space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <span className="text-[10px] text-[#e5c483]/60 font-bold tracking-[0.25em] uppercase">
+                실시간 통역 언어 (Live Interpretation)
+              </span>
+              <div className="flex items-center gap-4 bg-[#111320]/80 border border-white/10 rounded-2xl px-6 py-3 shadow-[0_12px_40px_rgba(0,0,0,0.4)] backdrop-blur-md">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#67C29F] opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-[#67C29F]"></span>
+                </span>
+                <div className="flex items-center gap-3 font-semibold text-xs tracking-wide text-white/90">
+                  <span className="bg-white/5 border border-white/10 px-3 py-1 rounded-xl shadow-inner uppercase tracking-wider">한국어</span>
+                  <span className="text-[#e5c483] text-sm animate-pulse">🔄</span>
+                  <span className="bg-[#85CAFF]/10 text-[#85CAFF] border border-[#85CAFF]/20 px-3 py-1 rounded-xl shadow-inner uppercase tracking-wider">{currentLangObj.name}</span>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm md:text-base text-white/40 tracking-wider font-medium text-center max-w-xl">
+              {statusMessage}
+            </p>
+          )}
         </div>
         
         {isLive && (
