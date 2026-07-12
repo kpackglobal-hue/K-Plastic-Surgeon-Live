@@ -121,47 +121,48 @@ async def live_translate_websocket_endpoint(websocket: WebSocket, target_lang: s
                 current_speaker = ""
                 need_new_turn = True
 
-                async for response in gemini_session.receive():
-                    # 새로운 턴 시작 감지 시 프론트엔드에 자막 생성 알림
-                    if need_new_turn and response.server_content:
-                        current_speaker = ""
-                        need_new_turn = False
-                        await websocket.send_json({"type": "start_turn", "speaker": "Pending"})
+                while True:
+                    async for response in gemini_session.receive():
+                        # 새로운 턴 시작 감지 시 프론트엔드에 자막 생성 알림
+                        if need_new_turn and response.server_content:
+                            current_speaker = ""
+                            need_new_turn = False
+                            await websocket.send_json({"type": "start_turn", "speaker": "Pending"})
 
-                    # 1. 사용자의 실시간 음성 인식 자막 (STT)
-                    if response.server_content and response.server_content.input_transcription:
-                        user_text = response.server_content.input_transcription.text
-                        if user_text:
-                            if not current_speaker or current_speaker == "Pending":
-                                if korean_pattern.search(user_text):
-                                    current_speaker = "Dr."
-                                else:
-                                    current_speaker = "Client"
-                                await websocket.send_json({"type": "start_turn", "speaker": current_speaker})
-                            
-                            await websocket.send_json({"type": "original_text", "content": user_text})
-                    
-                    # 2. 모델의 실시간 번역 자막 (TTS Transcript)
-                    if response.server_content and response.server_content.output_transcription:
-                        bot_text = response.server_content.output_transcription.text
-                        if bot_text:
-                            if not current_speaker or current_speaker == "Pending":
-                                if korean_pattern.search(bot_text):
-                                    current_speaker = "Client"
-                                else:
-                                    current_speaker = "Dr."
-                                await websocket.send_json({"type": "start_turn", "speaker": current_speaker})
+                        # 1. 사용자의 실시간 음성 인식 자막 (STT)
+                        if response.server_content and response.server_content.input_transcription:
+                            user_text = response.server_content.input_transcription.text
+                            if user_text:
+                                if not current_speaker or current_speaker == "Pending":
+                                    if korean_pattern.search(user_text):
+                                        current_speaker = "Dr."
+                                    else:
+                                        current_speaker = "Client"
+                                    await websocket.send_json({"type": "start_turn", "speaker": current_speaker})
                                 
-                            await websocket.send_json({"type": "translation_text", "content": bot_text})
-                            
-                    # 3. 모델의 번역 음성 바이너리 (AUDIO)
-                    if response.data:
-                        await websocket.send_bytes(response.data)
+                                await websocket.send_json({"type": "original_text", "content": user_text})
                         
-                    # 4. 한 턴 완료 감지 ➡️ 다음 데이터 유입 시 신규 턴을 시작하도록 플래그 셋
-                    if response.server_content and response.server_content.turn_complete:
-                        print(f"[Gemini] Turn complete for {target_lang_name}", flush=True)
-                        need_new_turn = True
+                        # 2. 모델의 실시간 번역 자막 (TTS Transcript)
+                        if response.server_content and response.server_content.output_transcription:
+                            bot_text = response.server_content.output_transcription.text
+                            if bot_text:
+                                if not current_speaker or current_speaker == "Pending":
+                                    if korean_pattern.search(bot_text):
+                                        current_speaker = "Client"
+                                    else:
+                                        current_speaker = "Dr."
+                                    await websocket.send_json({"type": "start_turn", "speaker": current_speaker})
+                                    
+                                await websocket.send_json({"type": "translation_text", "content": bot_text})
+                                
+                        # 3. 모델의 번역 음성 바이너리 (AUDIO)
+                        if response.data:
+                            await websocket.send_bytes(response.data)
+                            
+                        # 4. 한 턴 완료 감지 ➡️ 다음 데이터 유입 시 신규 턴을 시작하도록 플래그 셋
+                        if response.server_content and response.server_content.turn_complete:
+                            print(f"[Gemini] Turn complete for {target_lang_name}", flush=True)
+                            need_new_turn = True
 
             # [기존 로직 유지] 태스크 생성
             send_task = asyncio.create_task(google_stream_send())
