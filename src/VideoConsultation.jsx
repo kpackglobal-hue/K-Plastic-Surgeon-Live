@@ -158,7 +158,7 @@ const VideoConsultation = ({ roomId = "room-123", isDoctor = true, onBack }) => 
   };
 
   return (
-    <div className="relative w-full h-screen bg-black overflow-hidden flex flex-col items-center justify-center">
+    <div className="relative w-full h-screen bg-[#08090f] bg-premium-dark text-white font-sans selection:bg-[#e5c483]/30 selection:text-[#e5c483] overflow-hidden flex flex-col items-center justify-center">
       {/* 상대방 영상 (풀스크린) 또는 선택된 사진 */}
       <div className="relative w-full h-full max-h-screen flex items-center justify-center">
         {!selectedPhoto && (
@@ -174,7 +174,7 @@ const VideoConsultation = ({ roomId = "room-123", isDoctor = true, onBack }) => 
         {selectedPhoto && (
           <img src={selectedPhoto} alt="Patient" className="max-w-full max-h-full object-contain" />
         )}
-
+ 
         {/* 내 영상 (의사일 경우 우측 하단 PIP로 표시, 환자일 경우 hidden 유지) */}
         <video 
           ref={myVideo} 
@@ -195,50 +195,54 @@ const VideoConsultation = ({ roomId = "room-123", isDoctor = true, onBack }) => 
       </div>
       
       {/* 우측 자막 기록(트랜스크립트) 패널 */}
-      <div className="absolute right-0 top-0 h-full w-80 bg-black/80 border-l border-gray-700 p-6 flex flex-col z-40 backdrop-blur-md">
-        <h3 className="text-white text-xl font-bold mb-4 border-b border-gray-600 pb-2">실시간 상담 기록</h3>
-        <div className="flex-1 overflow-y-auto space-y-3 pr-2 scrollbar-hide">
-          {transcript.length === 0 && <div className="text-gray-400 text-sm">상담 내용이 여기에 기록됩니다...</div>}
+      <div className="absolute right-0 top-0 h-full w-80 bg-[#08090f]/75 border-l border-white/5 p-6 flex flex-col z-40 backdrop-blur-2xl">
+        <h3 className="text-[#e5c483]/90 text-xs font-bold tracking-widest mb-6 border-b border-white/5 pb-3 uppercase">
+          📋 실시간 상담 기록
+        </h3>
+        <div className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar">
+          {transcript.length === 0 && (
+            <div className="text-white/20 font-medium text-xs tracking-wide pl-1">
+              상담 내용이 실시간 기록됩니다...
+            </div>
+          )}
           {transcript.map((text, idx) => (
-            <div key={idx} className="bg-blue-900/60 p-3 rounded-xl text-white text-sm shadow">
+            <div key={idx} className="bg-white/5 border border-white/5 p-4 rounded-2xl text-white/90 text-xs leading-relaxed shadow-sm font-medium tracking-wide">
               {text}
             </div>
           ))}
         </div>
       </div>
-      
 
       {!isDoctor && !isPaid && (
         <button 
           onClick={handlePayment}
-          className="absolute bottom-32 left-1/2 transform -translate-x-1/2 bg-yellow-500 hover:bg-yellow-400 text-black px-8 py-4 rounded-full font-bold text-lg shadow-xl animate-bounce z-50 transition-colors"
+          className="absolute bottom-32 left-1/2 transform -translate-x-1/2 btn-gold text-[#08090f] font-extrabold px-8 py-4 rounded-full text-base shadow-xl animate-bounce z-50 transition-colors"
         >
           AI 시뮬레이션 결과 보기 ($14.99)
         </button>
       )}
-
+ 
       {/* 상태 메시지 */}
       {isGenerating && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/70 text-white text-3xl font-bold z-[100] backdrop-blur-sm">
           AI가 성형 후 모습을 생성 중입니다...
         </div>
       )}
-
+ 
       {/* 가상 성형 결과 팝업 */}
       {resultVisible && (
         <div className="absolute inset-0 z-[110] flex items-center justify-center bg-black/80 p-10 backdrop-blur-md">
-          <div className="bg-white p-8 rounded-3xl flex flex-col gap-6 shadow-2xl items-center max-w-lg w-full">
-            <h2 className="text-2xl font-bold text-gray-800">성형 후 예상 결과</h2>
+          <div className="bg-[#0f111a] border border-[#e5c483]/20 p-8 rounded-3xl flex flex-col gap-6 shadow-2xl items-center max-w-lg w-full">
+            <h2 className="text-xl font-bold text-[#e5c483] tracking-wider">성형 후 예상 결과</h2>
             
             {/* 플레이스홀더 영역 (실제 이미지 연동 전) */}
-            <div className="w-full h-80 bg-gray-200 rounded-xl flex items-center justify-center overflow-hidden relative">
-              <span className="text-gray-400 font-semibold absolute z-10">AI 생성 이미지 영역</span>
-              {/* <img src="/placeholder-after.jpg" alt="Result" className="w-full h-full object-cover relative z-20" /> */}
+            <div className="w-full h-80 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center overflow-hidden relative">
+              <span className="text-white/30 font-semibold absolute z-10 text-xs tracking-widest uppercase">AI 생성 이미지 영역</span>
             </div>
-
+ 
             <button 
               onClick={() => setResultVisible(false)} 
-              className="w-full bg-blue-600 hover:bg-blue-700 transition-colors text-white py-4 rounded-xl font-bold text-xl"
+              className="w-full btn-gold text-[#08090f] py-4 rounded-xl font-bold text-base"
             >
               닫기
             </button>
@@ -246,41 +250,43 @@ const VideoConsultation = ({ roomId = "room-123", isDoctor = true, onBack }) => 
         </div>
       )}
       
-      {/* 나가기 버튼 */}
+      {/* 나가기 버튼 (대면상담과 동일한 스펙 변경) */}
       <button 
         onClick={handleExit}
-        className="absolute top-6 left-6 z-50 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-lg font-semibold transition-colors shadow-md"
+        className="absolute top-6 left-6 z-50 text-white/50 hover:text-[#e5c483] flex items-center gap-2 transition-all duration-300 font-medium tracking-wide text-sm group"
       >
-        ← 나가기
+        <span className="transform translate-x-0 group-hover:-translate-x-1 transition-transform duration-300">←</span> 나가기
       </button>
       
-      {/* 넷플릭스 스타일 실시간 자막 오버레이 */}
-      <div className="absolute bottom-36 w-full flex justify-center px-8 pointer-events-none z-40">
-        <div className="text-white text-3xl font-bold bg-black/60 px-6 py-3 rounded-lg shadow-lg text-center max-w-4xl backdrop-blur-sm">
-          {subtitles || "자막 대기중..."}
+      {/* 넷플릭스 스타일 실시간 자막 오버레이 (자막 대기중 텍스트 삭제 및 조건부 가시화) */}
+      {subtitles && (
+        <div className="absolute bottom-36 w-full flex justify-center px-8 pointer-events-none z-40 animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <div className="text-white text-3xl font-bold bg-[#08090f]/75 border border-white/5 px-8 py-4 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.6)] text-center max-w-4xl backdrop-blur-md">
+            {subtitles}
+          </div>
         </div>
-      </div>
-
+      )}
+ 
       {/* 의사용 썸네일 컨트롤 패널 및 환자 정보 (좌측 하단) */}
       {isDoctor && (
-        <div className="absolute bottom-6 left-6 flex flex-col gap-4 bg-black/60 p-5 rounded-2xl backdrop-blur-md z-50 shadow-2xl border border-gray-700">
-          <div className="flex items-center gap-3 border-b border-gray-600 pb-3">
-            <span className="text-3xl">🇺🇸</span>
+        <div className="absolute bottom-6 left-6 flex flex-col gap-4 bg-[#08090f]/75 p-6 rounded-3xl backdrop-blur-2xl z-50 shadow-[0_20px_50px_rgba(0,0,0,0.6)] border border-white/5">
+          <div className="flex items-center gap-4 border-b border-white/5 pb-4">
+            <span className="text-3xl filter drop-shadow-[0_2px_5px_rgba(0,0,0,0.3)]">🇺🇸</span>
             <div>
-              <div className="text-white font-bold text-xl">Sarah Connor</div>
-              <div className="text-gray-300 text-sm">미국 (USA)</div>
+              <div className="text-white font-extrabold text-base tracking-wide">Sarah Connor</div>
+              <div className="text-white/40 text-xs tracking-wider">미국 (USA)</div>
             </div>
           </div>
-          <div className="text-white font-semibold text-sm">사전 촬영 사진:</div>
+          <div className="text-[#e5c483]/80 font-bold text-[10px] tracking-widest uppercase">사전 촬영 사진</div>
           <div className="flex gap-3">
             {MOCK_PHOTOS.map((photo) => (
               <button
                 key={photo.id}
                 onClick={() => handlePhotoClick(photo.url)}
-                className={`relative overflow-hidden rounded-lg w-20 h-20 border-2 transition-all hover:scale-105 ${selectedPhoto === photo.url ? 'border-blue-500 scale-110 shadow-lg' : 'border-transparent'}`}
+                className={`relative overflow-hidden rounded-xl w-20 h-20 border-2 transition-all duration-300 hover:scale-105 active:scale-95 ${selectedPhoto === photo.url ? 'border-[#e5c483] shadow-md shadow-[#e5c483]/10 scale-105' : 'border-transparent'}`}
               >
                 <img src={photo.url} alt={photo.label} className="w-full h-full object-cover" />
-                <div className="absolute bottom-0 w-full bg-black/50 text-white text-xs font-bold py-1 text-center">
+                <div className="absolute bottom-0 w-full bg-[#08090f]/75 text-white/80 text-[10px] font-bold py-1 text-center backdrop-blur-sm border-t border-white/5">
                   {photo.label}
                 </div>
               </button>
@@ -289,14 +295,14 @@ const VideoConsultation = ({ roomId = "room-123", isDoctor = true, onBack }) => 
           <div className="flex flex-col gap-2 mt-2">
             <button
               onClick={handleUndoDrawing}
-              className="bg-yellow-500 hover:bg-yellow-600 text-black w-full py-2 rounded-xl font-bold text-sm transition-colors shadow-lg flex items-center justify-center gap-2"
+              className="btn-gold text-[#08090f] w-full py-2.5 rounded-xl font-bold text-xs transition-all shadow-md active:scale-98 flex items-center justify-center gap-2"
             >
               <span>↩️</span> 실행 취소 (하나씩 지우기)
             </button>
             {selectedPhoto && (
               <button
                 onClick={handleBackToVideo}
-                className="bg-red-500 hover:bg-red-600 text-white w-full py-3 rounded-xl font-bold text-sm transition-colors shadow-lg"
+                className="bg-gradient-to-r from-[#8c2d2d] to-[#b33939] hover:from-[#b33939] hover:to-[#d64a4a] text-white/95 w-full py-2.5 rounded-xl font-bold text-xs transition-all active:scale-98"
               >
                 영상으로 돌아가기
               </button>
@@ -304,22 +310,22 @@ const VideoConsultation = ({ roomId = "room-123", isDoctor = true, onBack }) => 
           </div>
         </div>
       )}
-
+ 
       {/* 보정 필터 토글 버튼 */}
       <button 
         onClick={() => setIsBeautyFilterActive(!isBeautyFilterActive)}
-        className={`absolute top-6 right-48 z-50 px-4 py-2 rounded-xl text-sm font-bold transition-all duration-300 shadow-lg flex items-center gap-2 ${
+        className={`absolute top-6 right-48 z-50 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all duration-300 shadow-md flex items-center gap-2 active:scale-95 border ${
           isBeautyFilterActive 
-            ? 'bg-gradient-to-r from-pink-500 to-rose-600 text-white border border-pink-400' 
-            : 'bg-slate-800/80 hover:bg-slate-800 text-white/80 border border-slate-700'
+            ? 'bg-gradient-to-r from-[#e5c483] to-[#d4af37] text-[#08090f] border-[#e5c483]' 
+            : 'bg-white/5 text-white/80 hover:bg-white/10 border-white/10'
         }`}
       >
         <span>✨</span> {isBeautyFilterActive ? "보정 필터 ON" : "보정 필터 OFF"}
       </button>
-
+ 
       {/* 개발/테스트용 Peer ID 표시 */}
-      <div className="absolute top-6 right-6 text-white text-sm bg-black/50 p-2 rounded z-50">
-        My Peer ID: {peerId}
+      <div className="absolute top-6 right-6 text-white/40 text-[10px] font-bold tracking-widest bg-white/5 border border-white/5 px-3 py-2 rounded-2xl z-50 uppercase">
+        Peer ID: <span className="text-[#e5c483] font-mono">{peerId}</span>
       </div>
     </div>
   );
