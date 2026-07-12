@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { getWsUrl } from './config';
 
 // 70개 언어 스펙트럼 마스터 리스트
 const ALL_LANGUAGES = [
@@ -146,12 +147,7 @@ export default function TranslatorClient({ onBack }) {
       setChatLines([]); 
       nextStartTimeRef.current = 0;
       
-      const wsHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-        ? 'localhost:8000'
-        : window.location.host;
-        
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      wsRef.current = new WebSocket(`${protocol}//${wsHost}/ws/live-translate/${selectedLang}`);
+      wsRef.current = new WebSocket(getWsUrl(`/ws/live-translate/${selectedLang}`));
       wsRef.current.binaryType = 'arraybuffer';
       globalActiveWebSocket = wsRef.current;
 

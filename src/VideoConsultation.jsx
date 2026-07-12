@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { getWsUrl } from './config';
 import Peer from 'peerjs';
 import DrawingCanvas from './DrawingCanvas';
 
@@ -113,7 +114,7 @@ const VideoConsultation = ({ roomId = "room-123", isDoctor = true, onBack }) => 
     peer.on('open', (id) => setPeerId(id));
     
     // 3. 통역 엔진 WebSocket 연결 (기존 서버 재활용)
-    const translateSocket = new WebSocket(`ws://localhost:8000/ws/translate/en`);
+    const translateSocket = new WebSocket(getWsUrl(`/ws/translate/en`));
     translateSocket.addEventListener('message', (e) => {
       try {
         const data = JSON.parse(e.data);
@@ -133,7 +134,7 @@ const VideoConsultation = ({ roomId = "room-123", isDoctor = true, onBack }) => 
     });
 
     // 4. 룸 브로드캐스트 WebSocket 연결 (드로잉 좌표 등)
-    const broadcastSocket = new WebSocket(`ws://localhost:8000/ws/${roomId}`);
+    const broadcastSocket = new WebSocket(getWsUrl(`/ws/${roomId}`));
     
     broadcastSocket.addEventListener('message', (e) => {
       try {
