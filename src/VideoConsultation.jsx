@@ -13,7 +13,20 @@ const VideoConsultation = ({ roomId = "room-123", isDoctor = true, onBack }) => 
   const [isGenerating, setIsGenerating] = useState(false);
   const [resultVisible, setResultVisible] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
-  const [transcript, setTranscript] = useState([]);
+  const [chatLines, setChatLines] = useState([
+    {
+      id: "demo-1",
+      speaker: "Dr.",
+      original: "안녕하세요. 오늘 어떤 부위 상담을 도와드릴까요?",
+      translation: "Hello. How can I help you with your consultation today?"
+    },
+    {
+      id: "demo-2",
+      speaker: "Client",
+      original: "I am thinking about getting eyelid and nose surgery.",
+      translation: "눈이랑 코 성형을 생각하고 있어요."
+    }
+  ]);
   const [clearCounter, setClearCounter] = useState(0);
   const [undoCounter, setUndoCounter] = useState(0);
   const [isBeautyFilterActive, setIsBeautyFilterActive] = useState(false);
@@ -54,7 +67,7 @@ const VideoConsultation = ({ roomId = "room-123", isDoctor = true, onBack }) => 
       original_photos: MOCK_PHOTOS.map(p => p.url),
       // 현재는 캔버스 캡처본이 없으므로 빈 배열로 두지만 추후 그림 그려진 이미지를 base64로 캡처해 추가할 수 있음
       annotated_photos: [], 
-      consultation_transcript: transcript,
+      consultation_transcript: chatLines.map(line => `${line.speaker}: ${line.original} -> ${line.translation}`),
       consultation_date: new Date().toISOString()
     };
 
@@ -106,7 +119,15 @@ const VideoConsultation = ({ roomId = "room-123", isDoctor = true, onBack }) => 
         const data = JSON.parse(e.data);
         if (data.translated) {
           setSubtitles(data.translated); // 실시간 자막 업데이트
-          setTranscript(prev => [...prev, data.translated]); // 자막 기록 추가
+          setChatLines(prev => [
+            ...prev,
+            {
+              id: Math.random().toString(36).substring(2, 9),
+              speaker: isDoctor ? "Client" : "Dr.",
+              original: isDoctor ? "Incoming client speech..." : "의사 발화 실시간 분석 중...",
+              translation: data.translated
+            }
+          ]);
         }
       } catch (err) { }
     });
@@ -196,20 +217,68 @@ const VideoConsultation = ({ roomId = "room-123", isDoctor = true, onBack }) => 
       
       {/* 우측 자막 기록(트랜스크립트) 패널 */}
       <div className="absolute right-0 top-0 h-full w-80 bg-[#08090f]/75 border-l border-white/5 p-6 flex flex-col z-40 backdrop-blur-2xl">
-        <h3 className="text-[#e5c483]/90 text-xs font-bold tracking-widest mb-6 border-b border-white/5 pb-3 uppercase">
-          📋 실시간 상담 기록
+        <h3 className="text-[#e5c483]/90 text-sm font-bold tracking-widest mb-6 border-b border-white/5 pb-3 uppercase">
+          실시간 상담 기록
         </h3>
-        <div className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar">
-          {transcript.length === 0 && (
+        <div className="flex-1 overflow-y-auto space-y-6 pr-2 custom-scrollbar">
+          {chatLines.length === 0 ? (
             <div className="text-white/20 font-medium text-xs tracking-wide pl-1">
               상담 내용이 실시간 기록됩니다...
             </div>
-          )}
-          {transcript.map((text, idx) => (
-            <div key={idx} className="bg-white/5 border border-white/5 p-4 rounded-2xl text-white/90 text-xs leading-relaxed shadow-sm font-medium tracking-wide">
-              {text}
+          ) : (
+            <div className="space-y-6 divide-y divide-white/5">
+              {chatLines.map((line, idx) => (
+                <div 
+                  key={line.id} 
+                  className={`text-xs font-sans font-bold leading-relaxed tracking-wide flex flex-col space-y-1.5 ${idx > 0 ? 'pt-4' : ''}`}
+                >
+                  {/* 화자 뱃지 및 원본 발화 */}
+                  <div className="flex flex-col space-y-1">
+                    <div className="select-none flex items-center gap-1.5 pb-1">
+                      {line.speaker === "Dr." ? (
+                        <>
+                          <svg className="w-3.5 h-3.5 text-[#e5c483] filter drop-shadow-[0_1px_3px_rgba(229,196,131,0.4)]" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12a7.5 7.5 0 0015 0v-1.5M12 19.5v-7.5M12 12a3 3 0 100-6 3 3 0 000 6z" />
+                          </svg>
+                          <span className="text-[9px] font-bold tracking-widest text-[#e5c483] bg-[#e5c483]/10 border border-[#e5c483]/20 px-1.5 py-0.5 rounded uppercase">
+                            Doctor
+                          </span>
+                        </>
+                      ) : line.speaker === "Client" ? (
+                        <>
+                          <svg className="w-3.5 h-3.5 text-[#85CAFF] filter drop-shadow-[0_1px_3px_rgba(133,202,255,0.4)]" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                          </svg>
+                          <span className="text-[9px] font-bold tracking-widest text-[#85CAFF] bg-[#85CAFF]/10 border border-[#85CAFF]/20 px-1.5 py-0.5 rounded uppercase">
+                            Client
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="w-1.5 h-1.5 rounded-full bg-slate-500 animate-ping"></span>
+                          <span className="text-[9px] font-bold tracking-widest text-slate-400 bg-white/5 border border-white/10 px-1.5 py-0.5 rounded uppercase">
+                            Analyzing
+                          </span>
+                        </>
+                      )}
+                    </div>
+                    <span className="text-white/90 text-[11px] pl-1 font-semibold leading-relaxed">
+                      {line.original || <span className="text-white/10">음성 분석 중...</span>}
+                    </span>
+                  </div>
+                  
+                  {/* 번역 결과 */}
+                  {line.translation && (
+                    <div className="text-[11px] pl-1 font-medium leading-relaxed">
+                      <span className={line.speaker === "Dr." ? "text-[#67C29F]" : "text-[#85CAFF]"}>
+                        {line.translation}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
-          ))}
+          )}
         </div>
       </div>
 
