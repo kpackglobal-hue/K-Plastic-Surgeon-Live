@@ -96,77 +96,99 @@ async def live_translate_websocket_endpoint(websocket: WebSocket, target_lang: s
         async with client.aio.live.connect(model=MODEL_ID, config=config) as gemini_session:
             print(f"[Gemini] Gemini Live API connection successful for {target_lang_name}", flush=True)
 
-            # [루프 1] 마이크 오디오 전송
+            # [루프 1] 마이크 오디오 전송 (Explicit sampling rate added)
             async def google_stream_send():
-                try:
-                    while True:
-                        audio_bytes = await websocket.receive_bytes()
-                        await gemini_session.send_realtime_input(
-                            audio=types.Blob(data=audio_bytes, mime_type="audio/pcm")
-                        )
-                except WebSocketDisconnect:
-                    print(f"[WS] Connection closed for {target_lang_name}", flush=True)
-                except Exception as e:
-                    print(f"Send loop error: {e}", flush=True)
+                while True:
+                    audio_bytes = await websocket.receive_bytes()
+                    await gemini_session.send_realtime_input(
+                        audio=types.Blob(data=audio_bytes, mime_type="audio/pcm;rate=16000")
+                    )
 
             # [루프 2] 구글 공식 규격 단일 스트림 수신 루프 (화자 분리 & 실시간 전송)
             async def google_stream_receive():
-                try:
-                    import re
-                    # 한글 판별용 정규식 패턴 (ㄱ-ㅎ, ㅏ-ㅣ, 가-힣)
-                    korean_pattern = re.compile(r"[ㄱ-ㅎㅏ-ㅣ가-힣]+")
+                import re
+                # 한글 판별용 정규식 패턴 (ㄱ-ㅎ, ㅏ-ㅣ, 가-힣)
+                korean_pattern = re.compile(r"[ㄱ-ㅎㅏ-ㅣ가-힣]+")
+                
+                current_speaker = ""
+                need_new_turn = True
+
+                async for response in gemini_session.receive():
+                    # 새로운 턴 시작 감지 시 프론트엔드에 자막 생성 알림
+                    if need_new_turn and response.server_content:
+                        current_speaker = ""
+                        need_new_turn = False
+                        await websocket.send_json({"type": "start_turn", "speaker": "Pending"})
+
+                    # 1. 사용자의 실시간 음성 인식 자막 (STT)
+                    if response.server_content and response.server_content.input_transcription:
+                        user_text = response.server_content.input_transcription.text
+                        if user_text:
+                            if not current_speaker or current_speaker == "Pending":
+                                if korean_pattern.search(user_text):
+                                    current_speaker = "Dr."
+                                else:
+                                    current_speaker = "Client"
+                                await websocket.send_json({"type": "start_turn", "speaker": current_speaker})
+                            
+                            await websocket.send_json({"type": "original_text", "content": user_text})
                     
-                    current_speaker = ""
-                    need_new_turn = True
-
-                    async for response in gemini_session.receive():
-                        # 새로운 턴 시작 감지 시 프론트엔드에 자막 생성 알림
-                        if need_new_turn and response.server_content:
-                            current_speaker = ""
-                            need_new_turn = False
-                            await websocket.send_json({"type": "start_turn", "speaker": "Pending"})
-
-                        # 1. 사용자의 실시간 음성 인식 자막 (STT)
-                        if response.server_content and response.server_content.input_transcription:
-                            user_text = response.server_content.input_transcription.text
-                            if user_text:
-                                if not current_speaker or current_speaker == "Pending":
-                                    if korean_pattern.search(user_text):
-                                        current_speaker = "Dr."
-                                    else:
-                                        current_speaker = "Client"
-                                    await websocket.send_json({"type": "start_turn", "speaker": current_speaker})
+                    # 2. 모델의 실시간 번역 자막 (TTS Transcript)
+                    if response.server_content and response.server_content.output_transcription:
+                        bot_text = response.server_content.output_transcription.text
+                        if bot_text:
+                            if not current_speaker or current_speaker == "Pending":
+                                if korean_pattern.search(bot_text):
+                                    current_speaker = "Client"
+                                else:
+                                    current_speaker = "Dr."
+                                await websocket.send_json({"type": "start_turn", "speaker": current_speaker})
                                 
-                                await websocket.send_json({"type": "original_text", "content": user_text})
+                            await websocket.send_json({"type": "translation_text", "content": bot_text})
+                            
+                    # 3. 모델의 번역 음성 바이너리 (AUDIO)
+                    if response.data:
+                        await websocket.send_bytes(response.data)
                         
-                        # 2. 모델의 실시간 번역 자막 (TTS Transcript)
-                        if response.server_content and response.server_content.output_transcription:
-                            bot_text = response.server_content.output_transcription.text
-                            if bot_text:
-                                if not current_speaker or current_speaker == "Pending":
-                                    if korean_pattern.search(bot_text):
-                                        current_speaker = "Client"
-                                    else:
-                                        current_speaker = "Dr."
-                                    await websocket.send_json({"type": "start_turn", "speaker": current_speaker})
-                                    
-                                await websocket.send_json({"type": "translation_text", "content": bot_text})
-                                
-                        # 3. 모델의 번역 음성 바이너리 (AUDIO)
-                        if response.data:
-                            await websocket.send_bytes(response.data)
-                            
-                        # 4. 한 턴 완료 감지 ➡️ 다음 데이터 유입 시 신규 턴을 시작하도록 플래그 셋
-                        if response.server_content and response.server_content.turn_complete:
-                            print(f"[Gemini] Turn complete for {target_lang_name}", flush=True)
-                            need_new_turn = True
-                            
-                except WebSocketDisconnect:
-                    print(f"[WS] Connection closed for {target_lang_name}", flush=True)
-                except Exception as e:
-                    print(f"Receive loop error: {e}", flush=True)
+                    # 4. 한 턴 완료 감지 ➡️ 다음 데이터 유입 시 신규 턴을 시작하도록 플래그 셋
+                    if response.server_content and response.server_content.turn_complete:
+                        print(f"[Gemini] Turn complete for {target_lang_name}", flush=True)
+                        need_new_turn = True
 
-            await asyncio.gather(google_stream_send(), google_stream_receive())
+            # [기존 로직 유지] 태스크 생성
+            send_task = asyncio.create_task(google_stream_send())
+            receive_task = asyncio.create_task(google_stream_receive())
+            
+            # [수정된 핵심 로직] 
+            # FIRST_COMPLETED 대신, 개별 태스크의 상태를 감시하며 
+            # 예외 발생 시 전체를 안전하게 종료하도록 구성
+            tasks = [send_task, receive_task]
+            
+            try:
+                # 하나가 죽으면 나머지 하나를 즉시 취소하되, 
+                # wait를 사용하여 각 태스크의 결과를 명확히 체크
+                done, pending = await asyncio.wait(
+                    tasks, 
+                    return_when=asyncio.FIRST_COMPLETED
+                )
+                
+                # 에러가 발생해서 종료된 경우 에러 로그 출력
+                for task in done:
+                    if task.exception():
+                        print(f"[WS] Task Error: {task.exception()}", flush=True)
+                        
+            except Exception as e:
+                print(f"[WS] Critical stream error: {e}", flush=True)
+                
+            finally:
+                # 1. 모든 태스크 강제 취소
+                for task in tasks:
+                    if not task.done():
+                        task.cancel()
+                
+                # 2. 취소 작업 대기
+                await asyncio.gather(*tasks, return_exceptions=True)
+                print(f"[WS] Connection closed gracefully for {target_lang_name}", flush=True)
 
     except Exception as e:
         print(f"[Gemini] Error connecting to live session: {e}", flush=True)

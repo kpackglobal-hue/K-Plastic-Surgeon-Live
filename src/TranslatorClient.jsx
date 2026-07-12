@@ -203,15 +203,43 @@ export default function TranslatorClient({ onBack }) {
           try {
             const res = JSON.parse(event.data);
             if (res.type === 'start_turn') {
-              setChatLines(prev => [
-                ...prev,
-                {
-                  id: Math.random().toString(36).substring(2, 9),
-                  speaker: res.speaker,
-                  original: "",
-                  translation: ""
+              setChatLines(prev => {
+                if (prev.length > 0) {
+                  const lastItem = prev[prev.length - 1];
+                  // 💡 이전 턴이 침묵/소음 등으로 텍스트 없이 끝났다면 새 턴으로 덮어씁니다.
+                  if (lastItem.original === "") {
+                    const updated = [...prev];
+                    updated[updated.length - 1] = {
+                      id: lastItem.id,
+                      speaker: res.speaker,
+                      original: "",
+                      translation: ""
+                    };
+                    return updated;
+                  }
+                  // 💡 Pending 상태에서 실제 화자가 결정되었다면 화자 정보를 덮어씁니다.
+                  if (lastItem.speaker === "Pending") {
+                    if (res.speaker !== "Pending") {
+                      const updated = [...prev];
+                      updated[updated.length - 1] = {
+                        ...updated[updated.length - 1],
+                        speaker: res.speaker
+                      };
+                      return updated;
+                    }
+                    return prev;
+                  }
                 }
-              ]);
+                return [
+                  ...prev,
+                  {
+                    id: Math.random().toString(36).substring(2, 9),
+                    speaker: res.speaker,
+                    original: "",
+                    translation: ""
+                  }
+                ];
+              });
             } else if (res.type === 'original_text') {
               setChatLines(prev => {
                 if (prev.length === 0) return prev;
@@ -418,68 +446,77 @@ export default function TranslatorClient({ onBack }) {
           </p>
         </div>
         
-        <div className="w-full max-w-6xl p-8 rounded-3xl glass-card shadow-[0_20px_60px_rgba(0,0,0,0.6)] min-h-[450px] max-h-[600px] overflow-y-auto flex flex-col justify-between custom-scrollbar">
-          <div>
-            <p className="text-xs text-[#e5c483]/80 font-bold uppercase tracking-widest mb-6 flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#e5c483] animate-ping"></span>
-              📄 실시간 성형 상담 자막 (Live Transcript)
-            </p>
-            
-            {chatLines.length === 0 ? (
-              <p className="text-3xl text-white/20 font-bold font-sans italic tracking-wide pl-2">
-                환자분께 먼저 이야기하세요
+        {isLive && (
+          <div className="w-full max-w-6xl p-8 rounded-3xl glass-card shadow-[0_20px_60px_rgba(0,0,0,0.6)] min-h-[450px] max-h-[600px] overflow-y-auto flex flex-col justify-between custom-scrollbar">
+            <div>
+              <p className="text-xs text-[#e5c483]/80 font-bold uppercase tracking-widest mb-6 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#e5c483] animate-ping"></span>
+                📄 실시간 성형 상담 자막 (Live Transcript)
               </p>
-            ) : (
-              <div className="space-y-8 divide-y divide-white/5">
-                {chatLines.map((line, idx) => (
-                  <div 
-                    key={line.id} 
-                    className={`text-3xl font-sans font-bold leading-relaxed tracking-wide flex flex-col space-y-2 ${idx > 0 ? 'pt-6' : ''}`}
-                  >
-                    {/* 원본 발화 */}
-                    <div className="flex items-start gap-4">
-                      <div className="min-w-[140px] select-none flex items-center gap-2.5 pt-2">
-                        {line.speaker === "Dr." ? (
-                          <>
-                            <svg className="w-5 h-5 text-[#e5c483] filter drop-shadow-[0_2px_6px_rgba(229,196,131,0.4)]" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12a7.5 7.5 0 0015 0v-1.5M12 19.5v-7.5M12 12a3 3 0 100-6 3 3 0 000 6z" />
-                            </svg>
-                            <span className="text-xs font-bold tracking-widest text-[#e5c483] bg-[#e5c483]/10 border border-[#e5c483]/20 px-2 py-0.5 rounded-md uppercase">
-                              Doctor
-                            </span>
-                          </>
-                        ) : (
-                          <>
-                            <svg className="w-5 h-5 text-[#85CAFF] filter drop-shadow-[0_2px_6px_rgba(133,202,255,0.4)]" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-                            </svg>
-                            <span className="text-xs font-bold tracking-widest text-[#85CAFF] bg-[#85CAFF]/10 border border-[#85CAFF]/20 px-2 py-0.5 rounded-md uppercase">
-                              Client
-                            </span>
-                          </>
-                        )}
-                      </div>
-                      <span className="text-white/90">
-                        {line.original || <span className="text-white/10">음성 분석 중...</span>}
-                      </span>
-                    </div>
-                    
-                    {/* 번역 결과 */}
-                    {line.translation && (
+              
+              {chatLines.length === 0 ? (
+                <p className="text-3xl text-white/20 font-bold font-sans italic tracking-wide pl-2">
+                  환자분께 먼저 이야기하세요
+                </p>
+              ) : (
+                <div className="space-y-8 divide-y divide-white/5">
+                  {chatLines.map((line, idx) => (
+                    <div 
+                      key={line.id} 
+                      className={`text-3xl font-sans font-bold leading-relaxed tracking-wide flex flex-col space-y-2 ${idx > 0 ? 'pt-6' : ''}`}
+                    >
+                      {/* 원본 발화 */}
                       <div className="flex items-start gap-4">
-                        <span className="min-w-[140px]"></span>
-                        <span className={`${line.speaker === "Dr." ? "text-[#67C29F]" : "text-[#85CAFF]"} font-medium`}>
-                          {line.translation}
+                        <div className="min-w-[140px] select-none flex items-center gap-2.5 pt-2">
+                          {line.speaker === "Dr." ? (
+                            <>
+                              <svg className="w-5 h-5 text-[#e5c483] filter drop-shadow-[0_2px_6px_rgba(229,196,131,0.4)]" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12a7.5 7.5 0 0015 0v-1.5M12 19.5v-7.5M12 12a3 3 0 100-6 3 3 0 000 6z" />
+                              </svg>
+                              <span className="text-xs font-bold tracking-widest text-[#e5c483] bg-[#e5c483]/10 border border-[#e5c483]/20 px-2 py-0.5 rounded-md uppercase">
+                                Doctor
+                              </span>
+                            </>
+                          ) : line.speaker === "Client" ? (
+                            <>
+                              <svg className="w-5 h-5 text-[#85CAFF] filter drop-shadow-[0_2px_6px_rgba(133,202,255,0.4)]" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                              </svg>
+                              <span className="text-xs font-bold tracking-widest text-[#85CAFF] bg-[#85CAFF]/10 border border-[#85CAFF]/20 px-2 py-0.5 rounded-md uppercase">
+                                Client
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="w-2 h-2 rounded-full bg-slate-500 animate-ping"></span>
+                              <span className="text-xs font-bold tracking-widest text-slate-400 bg-white/5 border border-white/10 px-2 py-0.5 rounded-md uppercase">
+                                Analyzing
+                              </span>
+                            </>
+                          )}
+                        </div>
+                        <span className="text-white/90">
+                          {line.original || <span className="text-white/10">음성 분석 중...</span>}
                         </span>
                       </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
+                      
+                      {/* 번역 결과 */}
+                      {line.translation && (
+                        <div className="flex items-start gap-4">
+                          <span className="min-w-[140px]"></span>
+                          <span className={`${line.speaker === "Dr." ? "text-[#67C29F]" : "text-[#85CAFF]"} font-medium`}>
+                            {line.translation}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div ref={transcriptEndRef} />
           </div>
-          <div ref={transcriptEndRef} />
-        </div>
+        )}
       </main>
 
       {/* 🏆 하이글로시 샴페인 골드 푸터 버튼 */}
