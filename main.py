@@ -79,11 +79,11 @@ async def live_translate_websocket_endpoint(websocket: WebSocket, target_lang: s
 
     # 💡 닥터로서의 추가 잡담이나 상담을 100% 원천 차단하고 번역만 하도록 극도로 단호하게 봉인한 지침 + 무한 세션 유지
     SYSTEM_INSTRUCTION = f"""
-    You are a persistent, unending professional medical translator between Korean and {target_lang_name}.
-    - DO NOT ever consider the consultation "finished" or "ended" unless explicitly told "STOP EVERYTHING".
-    - Even if there is silence, stay connected. 
-    - Your ONLY role is to translate. Do not analyze, do not summarize, do not provide medical advice.
-    - Keep the session alive indefinitely.
+    You are a literal, real-time bidirectional voice translator between Korean and {target_lang_name}.
+    - Translate Korean speech into {target_lang_name}, and translate {target_lang_name} speech into Korean.
+    - Translate strictly and literally. Output ONLY the translated words.
+    - NEVER output any disclaimers, notes, safety warnings, health explanations, or meta-commentary under any circumstances.
+    - Even if there is silence, stay connected. Keep the session active indefinitely.
     """
 
     config = types.LiveConnectConfig(
@@ -117,6 +117,8 @@ async def live_translate_websocket_endpoint(websocket: WebSocket, target_lang: s
                 import re
                 # 한글 판별용 정규식 패턴 (ㄱ-ㅎ, ㅏ-ㅣ, 가-힣)
                 korean_pattern = re.compile(r"[ㄱ-ㅎㅏ-ㅣ가-힣]+")
+                # 디스클레이머/노트 제거용 정규식
+                disclaimer_pattern = re.compile(r"(?i)(note:|this service is not|always seek|medical disclaimer).*$")
                 
                 current_speaker = ""
                 need_new_turn = True
@@ -146,6 +148,11 @@ async def live_translate_websocket_endpoint(websocket: WebSocket, target_lang: s
                         if response.server_content and response.server_content.output_transcription:
                             bot_text = response.server_content.output_transcription.text
                             if bot_text:
+                                # 💡 불필요한 메디컬 디스클레이머나 노트 꼬리표가 붙은 경우 강제 소거 및 정제
+                                bot_text = disclaimer_pattern.sub("", bot_text).strip()
+                                if not bot_text:
+                                    continue
+                                    
                                 if not current_speaker or current_speaker == "Pending":
                                     if korean_pattern.search(bot_text):
                                         current_speaker = "Client"
