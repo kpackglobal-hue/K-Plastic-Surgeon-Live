@@ -16,6 +16,7 @@ const VideoConsultation = ({ roomId = "room-123", isDoctor = true, onBack }) => 
   const [transcript, setTranscript] = useState([]);
   const [clearCounter, setClearCounter] = useState(0);
   const [undoCounter, setUndoCounter] = useState(0);
+  const [isBeautyFilterActive, setIsBeautyFilterActive] = useState(false);
 
   const MOCK_PHOTOS = [
     { id: 'front', label: '정면', url: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=800&q=80' },
@@ -161,15 +162,31 @@ const VideoConsultation = ({ roomId = "room-123", isDoctor = true, onBack }) => 
       {/* 상대방 영상 (풀스크린) 또는 선택된 사진 */}
       <div className="relative w-full h-full max-h-screen flex items-center justify-center">
         {!selectedPhoto && (
-          <video ref={peerVideo} autoPlay playsInline className="w-full h-full object-cover" />
+          <video 
+            ref={peerVideo} 
+            autoPlay 
+            playsInline 
+            style={!isDoctor && isBeautyFilterActive ? { filter: "brightness(1.06) contrast(1.02) saturate(1.06) blur(0.4px) sepia(0.01)" } : {}}
+            className="w-full h-full object-cover" 
+          />
         )}
         
         {selectedPhoto && (
           <img src={selectedPhoto} alt="Patient" className="max-w-full max-h-full object-contain" />
         )}
 
-        {/* 내 영상 (숨김 처리, 연결 유지를 위해 DOM에는 존재) */}
-        <video ref={myVideo} autoPlay playsInline muted className="hidden" />
+        {/* 내 영상 (의사일 경우 우측 하단 PIP로 표시, 환자일 경우 hidden 유지) */}
+        <video 
+          ref={myVideo} 
+          autoPlay 
+          playsInline 
+          muted 
+          style={isDoctor && isBeautyFilterActive ? { filter: "brightness(1.06) contrast(1.02) saturate(1.06) blur(0.4px) sepia(0.01)" } : {}}
+          className={isDoctor 
+            ? "absolute bottom-6 right-6 w-32 h-44 object-cover rounded-2xl border border-white/20 shadow-2xl z-40 transition-all duration-500" 
+            : "hidden"
+          } 
+        />
         
         {/* 드로잉 캔버스 (영상/사진 위에 투명하게 올라감) */}
         <div className="absolute inset-0 z-30">
@@ -287,6 +304,18 @@ const VideoConsultation = ({ roomId = "room-123", isDoctor = true, onBack }) => 
           </div>
         </div>
       )}
+
+      {/* 보정 필터 토글 버튼 */}
+      <button 
+        onClick={() => setIsBeautyFilterActive(!isBeautyFilterActive)}
+        className={`absolute top-6 right-48 z-50 px-4 py-2 rounded-xl text-sm font-bold transition-all duration-300 shadow-lg flex items-center gap-2 ${
+          isBeautyFilterActive 
+            ? 'bg-gradient-to-r from-pink-500 to-rose-600 text-white border border-pink-400' 
+            : 'bg-slate-800/80 hover:bg-slate-800 text-white/80 border border-slate-700'
+        }`}
+      >
+        <span>✨</span> {isBeautyFilterActive ? "보정 필터 ON" : "보정 필터 OFF"}
+      </button>
 
       {/* 개발/테스트용 Peer ID 표시 */}
       <div className="absolute top-6 right-6 text-white text-sm bg-black/50 p-2 rounded z-50">

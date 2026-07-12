@@ -1,20 +1,29 @@
-import google.generativeai as genai
+from google import genai
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
 
 # API 키 설정 (환경 변수 사용 권장)
-genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+api_key = os.getenv("STITCH_API_KEY") or os.getenv("GOOGLE_API_KEY")
 
 class TranslatorMCP:
     def __init__(self):
-        self.model = genai.GenerativeModel("gemini-1.5-flash")
+        self.client = genai.Client(api_key=api_key)
+        self.model = "gemini-3.5-flash"
 
     async def start_translation(self, text, target_lang):
-        prompt = f"당신은 성형외과 전문 통역사입니다. 다음 내용을 {target_lang}로 정확하게 번역하세요: {text}"
-        # 동기 호출이지만 FastAPI websocket 안에서 블로킹되지 않으려면
-        # asyncio.to_thread 등을 쓰거나 generate_content_async를 사용해야 할 수도 있습니다.
-        # 여기서는 제공해주신 코드 원본을 유지합니다.
-        response = self.model.generate_content(prompt)
+        prompt = f"""You are a live medical translator.
+The user spoke in either Korean or {target_lang}.
+However, due to a browser Speech-to-Text limitation, foreign languages might be transcribed phonetically in Korean characters (e.g. '하우 알 유' -> 'How are you', or '마이 네임 이즈' -> 'My name is').
+1. Determine if the original spoken language was likely Korean or {target_lang}.
+2. If it was Korean, translate it to {target_lang}.
+3. If it was {target_lang} (even if written phonetically in Korean), translate it to Korean.
+Output ONLY the final translated text, without any explanations, alternatives, or greetings.
+Input Text: {text}
+"""
+        response = await self.client.aio.models.generate_content(
+            model=self.model,
+            contents=prompt
+        )
         return response.text

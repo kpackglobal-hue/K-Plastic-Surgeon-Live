@@ -1,1 +1,82 @@
 @import "tailwindcss";
+
+/* 프리미엄 럭셔리 미드나잇 그라데이션 백그라운드 */
+.bg-premium-dark {
+  background: radial-gradient(circle at top, #141726 0%, #08090f 100%);
+}
+
+/* 샴페인 골드 글래스모피즘 */
+.glass-card {
+  background: rgba(255, 255, 255, 0.02);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(212, 175, 55, 0.08);
+}
+
+.glass-card-hover {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.glass-card-hover:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(212, 175, 55, 0.2);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* 럭셔리 샴페인 골드 텍스트 그라데이션 */
+.text-gold-gradient {
+  background: linear-gradient(135deg, #f3e7c4 0%, #e5c483 50%, #d4af37 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* 샴페인 골드 보더 그라데이션 버튼 */
+.btn-gold {
+  background: linear-gradient(135deg, #e5c483 0%, #d4af37 100%);
+  box-shadow: 0 4px 20px rgba(212, 175, 55, 0.15);
+}
+.btn-gold:hover {
+  background: linear-gradient(135deg, #f3e7c4 0%, #e5c483 100%);
+  box-shadow: 0 6px 24px rgba(212, 175, 55, 0.25);
+}
+
+/* 마이크 활성화 시 펄스 웨이브 */
+.pulse-wave-1 {
+  animation: wave-pulse 2s infinite ease-out;
+}
+.pulse-wave-2 {
+  animation: wave-pulse 2s infinite ease-out 0.6s;
+}
+.pulse-wave-3 {
+  animation: wave-pulse 2s infinite ease-out 1.2s;
+}
+
+/* 커스텀 프리미엄 스크롤바 */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(212, 175, 55, 0.15);
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(212, 175, 55, 0.3);
+}
+
+@keyframes wave-pulse {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 0.3;
+    box-shadow: 0 0 0 30px rgba(212, 175, 55, 0.15), 0 0 0 60px rgba(212, 175, 55, 0.05);
+  }
+  100% {
+    transform: scale(1.15);
+    opacity: 0;
+  }
+}
