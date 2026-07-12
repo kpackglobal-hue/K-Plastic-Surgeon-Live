@@ -77,12 +77,13 @@ async def live_translate_websocket_endpoint(websocket: WebSocket, target_lang: s
     target_lang_name = GLOBAL_LANG_MAP.get(target_lang, f"{target_lang.upper()} Language")
     print(f"[WS] Medical Translation Room Opened: Korean <-> {target_lang_name}", flush=True)
 
-    # 💡 닥터로서의 추가 잡담이나 상담을 100% 원천 차단하고 번역만 하도록 극도로 단호하게 봉인한 지침
+    # 💡 닥터로서의 추가 잡담이나 상담을 100% 원천 차단하고 번역만 하도록 극도로 단호하게 봉인한 지침 + 무한 세션 유지
     SYSTEM_INSTRUCTION = f"""
-    You are a professional, universal real-time medical translator between Korean and {target_lang_name}.
-    - Your ONLY role is to translate Korean speech into {target_lang_name}, and {target_lang_name} speech into Korean.
-    - You must NOT act as a doctor, you must NOT answer any doctor consultation questions by yourself, and you must NOT chat or add conversational replies.
-    - Output ONLY the exact translated counterpart speech. Do NOT add any extra commentary, greetings, or conversational response.
+    You are a persistent, unending professional medical translator between Korean and {target_lang_name}.
+    - DO NOT ever consider the consultation "finished" or "ended" unless explicitly told "STOP EVERYTHING".
+    - Even if there is silence, stay connected. 
+    - Your ONLY role is to translate. Do not analyze, do not summarize, do not provide medical advice.
+    - Keep the session alive indefinitely.
     """
 
     config = types.LiveConnectConfig(
@@ -96,13 +97,20 @@ async def live_translate_websocket_endpoint(websocket: WebSocket, target_lang: s
         async with client.aio.live.connect(model=MODEL_ID, config=config) as gemini_session:
             print(f"[Gemini] Gemini Live API connection successful for {target_lang_name}", flush=True)
 
-            # [루프 1] 마이크 오디오 전송 (Explicit sampling rate added)
+            # [루프 1] 마이크 오디오 전송 및 하트비트(Ping) 수신 차단 해제
             async def google_stream_send():
                 while True:
-                    audio_bytes = await websocket.receive_bytes()
-                    await gemini_session.send_realtime_input(
-                        audio=types.Blob(data=audio_bytes, mime_type="audio/pcm;rate=16000")
-                    )
+                    message = await websocket.receive()
+                    if "bytes" in message:
+                        audio_bytes = message["bytes"]
+                        await gemini_session.send_realtime_input(
+                            audio=types.Blob(data=audio_bytes, mime_type="audio/pcm;rate=16000")
+                        )
+                    elif "text" in message:
+                        text_data = message["text"]
+                        if text_data == "ping":
+                            # 연결 생존용 더미 메시지이므로 Gemini에 보내지 않고 루프만 계속 돎
+                            continue
 
             # [루프 2] 구글 공식 규격 단일 스트림 수신 루프 (화자 분리 & 실시간 전송)
             async def google_stream_receive():

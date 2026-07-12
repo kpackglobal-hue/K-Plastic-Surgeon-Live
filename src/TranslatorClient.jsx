@@ -77,6 +77,7 @@ export default function TranslatorClient({ onBack }) {
   const transcriptEndRef = useRef(null);
   const nextStartTimeRef = useRef(0);
   const dropdownRef = useRef(null);
+  const pingIntervalRef = useRef(null);
 
   // 즐겨찾기 클릭 토글 함수
   const toggleFavorite = (code, e) => {
@@ -292,6 +293,14 @@ export default function TranslatorClient({ onBack }) {
       wsRef.current.onopen = () => {
         setIsLive(true);
         setStatusMessage(`🟢 실시간 통역 활성화됨 [한국어 🔄 ${currentLangObj.name}]`);
+        
+        // 💡 5초마다 실시간 핑(Heartbeat)을 전송하여 네트워크 차단/순단 방지
+        if (pingIntervalRef.current) clearInterval(pingIntervalRef.current);
+        pingIntervalRef.current = setInterval(() => {
+          if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+            wsRef.current.send("ping");
+          }
+        }, 5000);
       };
 
       wsRef.current.onclose = () => stopLiveTranslation();
@@ -305,6 +314,12 @@ export default function TranslatorClient({ onBack }) {
   const stopLiveTranslation = () => {
     setIsLive(false);
     setStatusMessage("성형 상담이 종료되었습니다.");
+
+    // 하트비트 해제
+    if (pingIntervalRef.current) {
+      clearInterval(pingIntervalRef.current);
+      pingIntervalRef.current = null;
+    }
 
     // 전역 싱글톤 참조 해제
     globalActiveWebSocket = null;
