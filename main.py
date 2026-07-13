@@ -101,15 +101,18 @@ async def live_translate_websocket_endpoint(websocket: WebSocket, target_lang: s
             async def google_stream_send():
                 while True:
                     message = await websocket.receive()
-                    if "bytes" in message:
-                        audio_bytes = message["bytes"]
+                    if message.get("type") == "websocket.disconnect":
+                        print(f"[WS] Client disconnected", flush=True)
+                        break
+                    
+                    audio_bytes = message.get("bytes")
+                    if audio_bytes:
                         await gemini_session.send_realtime_input(
                             audio=types.Blob(data=audio_bytes, mime_type="audio/pcm;rate=16000")
                         )
-                    elif "text" in message:
-                        text_data = message["text"]
+                    else:
+                        text_data = message.get("text")
                         if text_data == "ping":
-                            # 연결 생존용 더미 메시지이므로 Gemini에 보내지 않고 루프만 계속 돎
                             continue
 
             # [루프 2] 구글 공식 규격 단일 스트림 수신 루프 (화자 분리 & 실시간 전송)
