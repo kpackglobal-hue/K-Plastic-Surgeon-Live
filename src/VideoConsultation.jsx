@@ -31,6 +31,25 @@ const VideoConsultation = ({ roomId = "room-123", isDoctor = true, onBack }) => 
   const [clearCounter, setClearCounter] = useState(0);
   const [undoCounter, setUndoCounter] = useState(0);
   const [isBeautyFilterActive, setIsBeautyFilterActive] = useState(false);
+  const [surgeryConfirmed, setSurgeryConfirmed] = useState(false);
+
+  const handleToggleSurgery = async () => {
+    const nextVal = !surgeryConfirmed;
+    setSurgeryConfirmed(nextVal);
+    try {
+      await fetch('http://localhost:8000/api/surgery/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          booking_id: 1, // 데모용 예약 ID
+          confirmed: nextVal ? 1 : 0
+        })
+      });
+      console.log(`[EMR] Surgery confirmed flag updated: ${nextVal}`);
+    } catch (err) {
+      console.error("수술 확정 플래그 전송 에러:", err);
+    }
+  };
 
   const MOCK_PHOTOS = [
     { id: 'front', label: '정면', url: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=800&q=80' },
@@ -363,6 +382,17 @@ const VideoConsultation = ({ roomId = "room-123", isDoctor = true, onBack }) => 
             ))}
           </div>
           <div className="flex flex-col gap-2 mt-2">
+            <button
+              onClick={handleToggleSurgery}
+              className={`w-full py-2.5 rounded-xl font-bold text-xs transition-all shadow-md active:scale-98 flex items-center justify-center gap-2 border ${
+                surgeryConfirmed 
+                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 border-emerald-500 text-white' 
+                  : 'bg-slate-800 border-slate-700 text-slate-400'
+              }`}
+            >
+              <span>🏥</span> 수술 확정 플래그: {surgeryConfirmed ? "ON (환자 리워드)" : "OFF (제휴 병원)"}
+            </button>
+            
             <button
               onClick={handleUndoDrawing}
               className="btn-gold text-[#08090f] w-full py-2.5 rounded-xl font-bold text-xs transition-all shadow-md active:scale-98 flex items-center justify-center gap-2"

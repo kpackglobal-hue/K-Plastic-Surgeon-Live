@@ -17,7 +17,7 @@ export const getWsUrl = (path) => {
   // 3. 외부 원격 공유 터널 환경 (ngrok, localtunnel 등 사용 시)
   // 💡 아래 따옴표 안에 백엔드 포트 8000 터널 주소를 넣어주시면 즉시 외부에서 웹소켓이 연동됩니다.
   // 예: const REMOTE_BACKEND_URL = "https://your-backend.ngrok-free.app";
-  const REMOTE_BACKEND_URL = "https://silent-boats-eat.loca.lt"; 
+  const REMOTE_BACKEND_URL = "https://tiny-jokes-spend.loca.lt"; 
 
   if (REMOTE_BACKEND_URL) {
     const cleanUrl = REMOTE_BACKEND_URL.replace(/^https?:\/\//, '');

@@ -79,6 +79,55 @@ export default function TranslatorClient({ onBack }) {
   const nextStartTimeRef = useRef(0);
   const dropdownRef = useRef(null);
   const pingIntervalRef = useRef(null);
+  const demoIntervalRef = useRef(null);
+  const [isDemoMode, setIsDemoMode] = useState(false);
+
+  // 데모 성형상담 시뮬레이션 모드 기동 (마이크 권한 차단 또는 백엔드 오프라인 시 자동 전환)
+  const startDemoSimulation = () => {
+    setIsLive(true);
+    setIsDemoMode(true);
+    setStatusMessage("💡 [데모 시뮬레이션 모드 활성화] 마이크 점유 또는 네트워크 연결 오류로 인해 가상 상담으로 자동 대체되었습니다.");
+    setChatLines([]);
+
+    const demoDialogues = [
+      { speaker: "Dr.", original: "안녕하세요, 오늘 어떤 성형 부위 상담을 도와드릴까요?", translation: "Hello, what part of plastic surgery consultation can I help you with today?" },
+      { speaker: "Client", original: "I want to raise my nose bridge but keep it looking natural. Is that possible?", translation: "콧대를 높이고 싶지만 자연스럽게 유지하고 싶습니다. 그게 가능할까요?" },
+      { speaker: "Dr.", original: "네, 환자분의 귀연골이나 자가 연골 조직을 조합하여 사용하면 인공 보형물 없이도 매우 자연스러운 라인이 가능합니다.", translation: "Yes, by combining your own ear cartilage or autologous cartilage tissue, we can create a very natural line without artificial implants." },
+      { speaker: "Client", original: "That sounds reassuring. How long is the recovery period?", translation: "안심이 되네요. 회복 기간은 얼마나 걸리나요?" },
+      { speaker: "Dr.", original: "보통 큰 붓기는 1주일 이내에 빠지고, 실밥은 5일에서 7일 사이에 제거하게 됩니다. 일상생활은 바로 가능합니다.", translation: "Usually, major swelling subsides within a week, and stitches are removed between 5 to 7 days. Daily life is possible immediately." }
+    ];
+
+    let currentIdx = 0;
+    if (demoIntervalRef.current) clearInterval(demoIntervalRef.current);
+    
+    // 첫 마디 바로 전송
+    setChatLines([
+      {
+        id: `demo-line-${currentIdx}`,
+        speaker: demoDialogues[0].speaker,
+        original: demoDialogues[0].original,
+        translation: demoDialogues[0].translation
+      }
+    ]);
+    currentIdx++;
+
+    demoIntervalRef.current = setInterval(() => {
+      if (currentIdx >= demoDialogues.length) {
+        clearInterval(demoIntervalRef.current);
+        return;
+      }
+      setChatLines(prev => [
+        ...prev,
+        {
+          id: `demo-line-${currentIdx}`,
+          speaker: demoDialogues[currentIdx].speaker,
+          original: demoDialogues[currentIdx].original,
+          translation: demoDialogues[currentIdx].translation
+        }
+      ]);
+      currentIdx++;
+    }, 4500);
+  };
 
   // 즐겨찾기 클릭 토글 함수
   const toggleFavorite = (code, e) => {
@@ -299,17 +348,33 @@ export default function TranslatorClient({ onBack }) {
         }, 5000);
       };
 
-      wsRef.current.onclose = () => stopLiveTranslation();
+      wsRef.current.onerror = (e) => {
+        console.warn("WebSocket 연결 오류. 데모 시뮬레이션 모드로 전환합니다.", e);
+        startDemoSimulation();
+      };
+
+      wsRef.current.onclose = () => {
+        if (!isDemoMode) {
+          stopLiveTranslation();
+        }
+      };
 
     } catch (err) {
-      console.error("라이브 세션 기동 실패:", err);
-      stopLiveTranslation();
+      console.warn("라이브 세션 기동 실패 (마이크 또는 소켓 연결 해제). 시뮬레이션 모드로 자동 기동합니다.", err);
+      startDemoSimulation();
     }
   };
 
   const stopLiveTranslation = () => {
     setIsLive(false);
+    setIsDemoMode(false);
     setStatusMessage("성형 상담이 종료되었습니다.");
+
+    // 데모 인터벌 해제
+    if (demoIntervalRef.current) {
+      clearInterval(demoIntervalRef.current);
+      demoIntervalRef.current = null;
+    }
 
     // 하트비트 해제
     if (pingIntervalRef.current) {
@@ -468,6 +533,14 @@ export default function TranslatorClient({ onBack }) {
                   <span className="bg-[#85CAFF]/10 text-[#85CAFF] border border-[#85CAFF]/20 px-3 py-1 rounded-xl shadow-inner uppercase tracking-wider">{currentLangObj.name}</span>
                 </div>
               </div>
+              {!isDemoMode && (
+                <button
+                  onClick={startDemoSimulation}
+                  className="mt-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-[#e5c483]/10 text-[#e5c483] border border-[#e5c483]/30 hover:bg-[#e5c483]/20 transition-all active:scale-95 cursor-pointer shadow-md"
+                >
+                  🎙️ 데모 대화 채우기 (Simulate Dialogue)
+                </button>
+              )}
             </div>
           ) : (
             <p className="text-sm md:text-base text-white/40 tracking-wider font-medium text-center max-w-xl">
